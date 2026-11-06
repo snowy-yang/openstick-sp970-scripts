@@ -1,0 +1,4 @@
+0fbc84108c382c97fd5a101d7e1bd853d8abfdaaf90cc20c7fed83472b8f146f  boot-sp970-nomodrm.img
+8eb7e04dbde28b1825220647ed7978917e40ac8f78f9a09ab3a0b8e6edc89436  rootfs-sp970-debian12.img
+911a5ec1ad83fc3f7148812c06bd457ff98b2f59d78f67abc78661bc08da676a  lk2nd.img
+c7e09f7a7b6adb05801688a69518db293ac9a5b05f5dcebab50b992ac9849d4a  msm8916-handsome-openstick-sp970.dtb

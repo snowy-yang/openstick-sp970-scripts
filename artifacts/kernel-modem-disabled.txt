@@ -1,0 +1,5 @@
+# CONFIG_QRTR is not set
+# CONFIG_RMNET is not set
+# CONFIG_WWAN is not set
+# CONFIG_QCOM_Q6V5_MSS is not set
+# CONFIG_QCOM_MEMSHARE_QMI_SERVICE is not set
