@@ -50,7 +50,7 @@ scripts/upgrade/upgrade-safety-check.sh  # 确认 autoremove 不会误删 gadget
 scripts/upgrade/pre-upgrade-harden.sh    # 确保 gadget 不会在升级/重启中丢失
 ```
 
-第 3 个脚本是必须的：`apt autoremove` 是**唯一已知能把设备从总线上抹掉的操作**，事故复盘见 [9.1](#91-usb-设备整机消失gadget-被拆除)。
+第 3 个脚本是必须的：`apt autoremove` 是**唯一已知能把设备从总线上抹掉的操作**，事故复盘见 [9.1](09-troubleshooting.md#91-usb-设备整机消失gadget-被拆除)。
 
 ### 步骤 4：执行升级
 
