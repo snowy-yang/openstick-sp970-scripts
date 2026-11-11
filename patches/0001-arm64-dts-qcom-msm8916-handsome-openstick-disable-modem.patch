@@ -1,0 +1,90 @@
+From 2a93e56b295b6530bd19b156fa59c2cbc3259a47 Mon Sep 17 00:00:00 2001
+From: snowy-yang <snowy-yang@foxmail.com>
+Date: Fri, 6 Nov 2026 17:27:48 +0800
+Subject: [PATCH] arm64: dts: qcom: msm8916-handsome-openstick: disable modem
+
+The SP970 build is intended to run without a modem. Keep the MSS remote
+processor and all of its modem-transport sub-nodes (bam-dmux, smd-edge)
+disabled at the board level so no modem driver or firmware is ever
+probed, and drop the msm8916-modem.dtsi include along with the mpss_mem
+reserved-memory carveout that only existed to back the modem firmware.
+
+The &memshare override is kept (moved to the end of the file) so that
+the memshare QMI service stays off as well; it is only required for GPS,
+which works either with memshare absent or with its request rejected.
+
+Signed-off-by: snowy-yang <snowy-yang@foxmail.com>
+---
+ .../msm8916-handsome-openstick-common.dtsi    | 38 ++++++++++---------
+ 1 file changed, 21 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
+index 195804634..6f4a7aae8 100644
+--- a/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
+@@ -7,7 +7,6 @@
+ /dts-v1/;
+ 
+ #include "msm8916-pm8916.dtsi"
+-#include "msm8916-modem.dtsi"
+ #include <dt-bindings/gpio/gpio.h>
+ #include <dt-bindings/input/input.h>
+ #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+@@ -28,10 +27,6 @@ chosen {
+ 	};
+ 
+ 	reserved-memory {
+-		mpss_mem: gps_mem: mpss@86800000 {
+-			reg = <0x0 0x86800000 0x0 0x5500000>;
+-			no-map;
+-		};
+ 	};
+ 
+ 	usb_id: usb-id {
+@@ -43,18 +38,6 @@ usb_id: usb-id {
+ 
+ };
+ 
+-/*
+- * The modem firmware sends a "query_size" memshare request for client ID 1,
+- * but basically does not do anything with it. GPS works only if:
+- *   - Memshare is not present or
+- *   - Memshare replies to the request with an error
+- * Overall it seems pointless to enable memshare for this device.
+- */
+- 
+-&memshare {
+-	status = "disabled";
+-};
+-
+ &blsp_dma {
+ 	status = "okay";
+ };
+@@ -208,3 +191,24 @@ l18 {
+ 		regulator-max-microvolt = <2700000>;
+ 	};
+ };
++
++/*
++ * Modem disabled build: ensure the MSS remote processor and all its
++ * modem-transport sub-nodes stay disabled so that no modem driver or
++ * firmware is ever loaded on this board.
++ */
++&mpss {
++	status = "disabled";
++
++	bam-dmux {
++		status = "disabled";
++	};
++
++	smd-edge {
++		status = "disabled";
++	};
++};
++
++&memshare {
++	status = "disabled";
++};
+-- 
+2.53.0
+

@@ -1,0 +1,41 @@
+# ---- 构建产物：二进制不入库，校验和见 artifacts/SHA256SUMS.txt ----
+*.img
+*.raw
+*.ko
+*.dtb
+*.dtbo
+*.o
+*.a
+*.bin
+*.mbn
+*.elf
+*.tar
+*.tar.gz
+*.tar.xz
+*.cpio
+*.gz
+*.xz
+*.zst
+*.log
+
+# ---- 内核构建目录 ----
+build/
+modinst/
+bootwork/
+rdcheck/
+rootfs-slim/
+out*/
+*.cmd
+*.order
+*.symvers
+Module.symvers
+modules.builtin*
+
+# ---- 编辑器 / 系统 ----
+*~
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
