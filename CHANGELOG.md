@@ -2,6 +2,27 @@
 
 本项目的版本按"一个可刷写的产物集"划分。每条记录都给出可验证的量化结果。
 
+## [0.3.0] - 2026-11-12
+
+**设备树精简：关掉板子上不存在的硬件，并把它们的预留内存还给系统。**
+
+### 新增
+
+- `patches/0002-arm64-dts-qcom-msm8916-handsome-openstick-disable-unused-peripherals.patch` —— 关闭 GPU（Adreno 306）、venus、两套 LPASS（`&lpass` / `&lpass_codec`）、PMIC 模拟 codec（`&wcd_codec`）、只服务它们的 `&apps_iommu` / `&gpu_iommu`，以及 modem 专用的 `smp2p-hexagon`。文档同时补上音频链路清点（内核 `# CONFIG_SOUND is not set`，rootfs 无 `snd*.ko`）与 PMIC 侧「基文件本就 disabled」的核对结果。
+- 删除已无使用者的预留内存：`mpss_mem` 43 MB、`venus_mem` 5 MB、`mba_mem` 1 MB、`rmtfs` 0.875 MB、`rfsa` 0.125 MB、无名的 `reserved@86680000` 0.5 MB；同时用 `/delete-property/ memory-region` 断开 `&mpss` 子节点与 `&venus` 的引用，避免 `dtc` 悬空 phandle 报错。
+- `boot-sp970-nomodrm-v2.img`（13,588,480 字节）与独立的 `msm8916-handsome-openstick-sp970.dtb`（47,301 字节），导出在 `D:\msm8916\out-boot\`。
+
+### 变更
+
+- 预留内存 **63.00 MB → 12.50 MB**，512 MB 的机器多出约 **50 MB** 可用 RAM；`wcnss` 的 6 MB 保留（WiFi 固件）。
+- 修正文档里"补丁 1 释放了 85 MiB"的说法：85 MiB 是板级覆写值，删除后回落到基文件的 43 MiB，真正的回收发生在补丁 2。
+
+### 验证
+
+- `make qcom/msm8916-handsome-openstick-sp970.dtb` 编译通过；`dtc` 反编译确认目标节点全部 `disabled`、预留内存合计 12.50 MB、`mpss_mem` / `venus_mem` / `mba_mem` / `86800000` 全部消失。
+- 新 boot.img 与旧镜像**同尺寸**（13,588,480），kernel/ramdisk/cmdline 未变，仅尾部 DTB 不同。
+- **尚未上机验证**（设备离线）。
+
 ## [0.2.0] - 2026-11-11
 
 **文档与仓库重构。** 目标是让项目能被别人独立复现，而不是一堆 bring-up 期间的临时脚本。

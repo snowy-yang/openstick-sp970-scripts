@@ -1,0 +1,140 @@
+From c2293407541b91f59c81bcb8826e5a083523bd7c Mon Sep 17 00:00:00 2001
+From: snowy-yang <snowy-yang@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 18:51:38 +0800
+Subject: [PATCH] arm64: dts: qcom: msm8916-handsome-openstick: disable unused
+ peripherals
+
+These boards are USB dongles: no display, no camera, no audio and no video
+decoder. The sound side is already dead in the kernel - CONFIG_SOUND is not
+set, so there is not a single CONFIG_SND symbol in the build - but the device
+tree still describes four audio blocks and a sound card, so turn those off as
+well: the APQ8016 sound card, the LPASS CPU DAI, the WCD digital codec and
+the PMIC analog codec. The ADSP audio services (q6afe/q6asm/q6adm/q6mvm) go
+away with the &mpss smd-edge that patch 1 disabled.
+
+Do the same for the Adreno 306 and the two IOMMU instances that only serve
+these controllers (apps_iommu for venus/mdss/camss, gpu_iommu for the GPU).
+There is no display output to drive and CONFIG_DRM_MSM is not set, so the GPU
+node would never be claimed by a driver anyway; leaving it described as
+enabled only pretends the board has a use for it.
+
+The modem-specific hexagon SMP2P channels go away too: with no MSS to talk to,
+nothing needs those interrupts or their shared memory entries. The wcnss
+channels stay, pronto uses them to bring up WiFi. The PMIC charger, fuel
+gauge, PWM and USB extcon need no board level change, pm8916.dtsi already
+describes them as disabled.
+
+With the modem gone the largest reservations on the device are dead weight:
+mpss_mem alone is 43 MiB and the other modem-side regions (MBA, rmtfs, rfsa)
+add another 2 MiB, plus 5 MiB for venus. Drop the memory-region properties
+that point at them and delete the reservations themselves, together with the
+unused 512 KiB region at 0x86680000. Together with the modem firmware
+carveout this returns ~50 MiB to the buddy allocator, which is a meaningful
+amount of RAM on a 512 MiB device.
+
+The wcnss reservation stays: pronto needs it to load the WiFi firmware.
+---
+ .../msm8916-handsome-openstick-common.dtsi    | 76 ++++++++++++++++++-
+ 1 file changed, 75 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
+index 6f4a7aae8..f80150bc4 100644
+--- a/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
+@@ -47,7 +47,7 @@ &blsp1_uart2 {
+ };
+ 
+ &lpass {
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &pronto {
+@@ -200,6 +200,14 @@ l18 {
+ &mpss {
+ 	status = "disabled";
+ 
++	mba {
++		/delete-property/ memory-region;
++	};
++
++	mpss {
++		/delete-property/ memory-region;
++	};
++
+ 	bam-dmux {
+ 		status = "disabled";
+ 	};
+@@ -212,3 +220,69 @@ smd-edge {
+ &memshare {
+ 	status = "disabled";
+ };
++
++/*
++ * OpenStick dongles are headless: no display, no camera, no audio codec and
++ * no video decoder on the board. Keep those controllers un-probed so they
++ * never request firmware, clocks, power domains or IOMMU contexts.
++ */
++&soc {
++	gpu@1c00000 {
++		status = "disabled";
++	};
++};
++
++&venus {
++	status = "disabled";
++	/delete-property/ memory-region;
++};
++
++&lpass_codec {
++	status = "disabled";
++};
++
++/* Analog half of the (unused) audio codec, inside the PMIC. */
++&wcd_codec {
++	status = "disabled";
++};
++
++/* Only venus, mdss and camss used this one; all three are off. */
++&apps_iommu {
++	status = "disabled";
++};
++
++/* Only the GPU used this one. */
++&gpu_iommu {
++	status = "disabled";
++};
++
++/*
++ * The modem firmware region is the largest reserved block on this board
++ * (43 MiB) and is dead weight once the MSS remote processor is disabled.
++ * Dropping it (plus the modem-side rmtfs/rfsa/MBA regions and the venus
++ * region) returns roughly 50 MiB to the buddy allocator, which is a
++ * meaningful amount of RAM on a 512 MiB device.
++ */
++/delete-node/ &mpss_mem;
++/delete-node/ &mba_mem;
++/delete-node/ &venus_mem;
++
++/ {
++	reserved-memory {
++		/delete-node/ reserved@86680000;
++		/delete-node/ rmtfs@86700000;
++		/delete-node/ rfsa@867e0000;
++	};
++};
++
++/*
++ * The hexagon SMP2P channels belong to the modem remote processor, which
++ * patch 1 disabled: without it nobody needs to set up interrupts and shared
++ * memory entries for a core that will never boot. The wcnss channels stay,
++ * pronto uses them.
++ */
++/ {
++	smp2p-hexagon {
++		status = "disabled";
++	};
++};
+-- 
+2.53.0
+

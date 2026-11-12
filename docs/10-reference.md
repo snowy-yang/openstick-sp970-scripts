@@ -74,6 +74,19 @@ RuntimeMaxFileSize=4M
 Compress=yes
 ```
 
+### 预留内存（补丁 1 + 补丁 2 之后）
+
+| 区域 | 大小 | 用途 |
+|---|---|---|
+| `tz-apps@86000000` | 3.000 MB | TrustZone 应用 |
+| `smem_region@86300000` | 1.000 MB | 共享内存（SMD/SMP2P，WiFi 需要） |
+| `hypervisor@86400000` | 1.000 MB | EL2 |
+| `tz@86500000` | 1.500 MB | TrustZone |
+| `wcnss@8df00000` | 6.000 MB | WiFi 固件加载区（**不可删**） |
+| **合计** | **12.500 MB** | 优化前 63.00 MB |
+
+被删掉的：`mpss@86800000` 43 MB、`venus@8e500000` 5 MB、`mba@8ea00000` 1 MB、`rmtfs@86700000` 0.875 MB、`rfsa@867e0000` 0.125 MB、`reserved@86680000` 0.5 MB。
+
 ### 文件系统
 
 | 项目 | 值 |
@@ -131,6 +144,8 @@ Compress=yes
 | 文件 | 字节 | 状态 |
 |---|---|---|
 | `boot-sp970-current.img` | 13,588,480 | 与可用系统配套，回退基准 |
+| `boot-sp970-nomodrm-v2.img` | 13,588,480 | 设备树优化（预留内存 12.5 MB），未上机验证 |
+| `msm8916-handsome-openstick-sp970.dtb` | 47,301 | `v2` 里使用的设备树，可直接反编译比对 |
 | `boot-sp970-tiny-rd.img` | 8,658,944 | 未上机验证 |
 | `boot-sp970-noinitrd.img` | 6,684,672 | 未上机验证 |
 

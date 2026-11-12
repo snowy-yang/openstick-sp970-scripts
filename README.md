@@ -35,7 +35,7 @@
 | 启动镜像 | 13,588,480 字节；另有 8.6 MB / 6.7 MB 两个候选 |
 | 失败单元 | 0 |
 
-对比改造前：磁盘 655 MB → 303 MB，模块 325 → 175 个，释放 85 MiB 被 modem 固件占用的保留内存。
+对比改造前：磁盘 655 MB → 303 MB，模块 325 → 175 个，预留内存 63 MB → 12.5 MB（512 MB 的机器多出约 50 MB 可用 RAM）。
 
 ## 硬件
 
@@ -70,7 +70,7 @@ PBL/SBL → lk2nd (aboot, 32-bit) → scm_elexec_call (EL3) → Linux arm64
 ```bash
 # 1. 打内核补丁并编译
 git clone https://github.com/OpenStick/linux && cd linux
-git am /path/to/patches/0001-*.patch
+git am /path/to/patches/000*.patch
 make O=build ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image dtbs -j"$(nproc)"
 
 # 2. 装配根文件系统（详见 docs/04-rootfs.md）
@@ -143,7 +143,7 @@ fastboot reboot
 下面几条是这套方案成立的原因，细节在各章展开。
 
 **1. modem 在设备树层面关死，不靠运行期开关。**
-删掉 `msm8916-modem.dtsi` 的 include、删掉 85 MiB 的 `mpss_mem` 保留内存、在板级把 `&mpss` / `bam-dmx` / `smd-edge` / `&memshare` 全部 `status = "disabled"`。早期尝试从 `msm8916.dtsi` 基文件删节点，会因标签被其他板级文件引用而让 `dtc` 直接失败 —— 保留节点、覆盖状态才是可维护的做法。
+删掉 `msm8916-modem.dtsi` 的 include、删掉板级对 `mpss_mem` 的 85 MiB 覆写、在板级把 `&mpss` / `bam-dmx` / `smd-edge` / `&memshare` 全部 `status = "disabled"`；再把 GPU / venus / 两套 LPASS / PMIC 模拟 codec / 两个 IOMMU 一起关掉，并删除 Modem、Venus、MBA、rmtfs、rfsa 这些已经没人用的预留内存，预留区从 63 MB 降到 12.5 MB。音频不用关：这份内核连 `CONFIG_SOUND` 都没编，设备树里 4 个音频节点也全部 `disabled`；PMIC 的充电器/电量计/PWM/extcon 在基文件里本来就没开，唯一补做的是 modem 专用的 `smp2p-hexagon`（见 [3.3](docs/03-kernel.md#音频内核里根本不存在)）。早期尝试从 `msm8916.dtsi` 基文件删节点，会因标签被其他板级文件引用而让 `dtc` 直接失败 —— 保留节点、覆盖状态才是可维护的做法（只有引用点也一并清理时才用 `/delete-node/`）。
 
 **2. 模块裁剪必须做依赖闭包校验。**
 `modinfo -F depends` 逐项检查，冲突就中止。第一版差点因为保留 `v4l2-flash-led-class` 把整个 V4L2 核心拖回来。

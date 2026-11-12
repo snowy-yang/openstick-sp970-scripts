@@ -109,6 +109,9 @@ console=ttyMSM0,115200 no_framebuffer=true rw
 | 镜像 | 字节 | 组成 |
 |---|---|---|
 | `boot-sp970-nomodrm.img` | 13,588,480 | 2048 头 + kernel 6,680,576 + ramdisk 6,565,888 + 填充 339,968 |
+| `boot-sp970-nomodrm-v2.img` | 13,588,480 | 同上，但尾部 DTB 换成[补丁 2](03-kernel.md#33-补丁-2关掉无用外设并回收预留内存)的版本（kernel 6,678,415 + DTB 47,301） |
+
+两版的 kernel/ramdisk/cmdline 完全一致，唯一差异是追加在 `zImage` 尾部的设备树：`v2` 多关了 GPU / venus / 两套 LPASS / PMIC 模拟 codec / 两个 IOMMU，并把预留内存从 63.00 MB 降到 12.50 MB，**相当于给 512 MB 的机器多出约 50 MB 可用 RAM**（音频在补丁 2 之前就已经在内核层面不存在，见 [3.3](03-kernel.md#音频内核里根本不存在)）。`v2` 与 `boot-sp970-tiny-rd.img`、`boot-sp970-noinitrd.img` 是三个互不包含的候选，可以自由组合（组合时用同一个 DTB 即可）。
 
 官方镜像头里有 `bootsize=0xcf5800`，但这个值**来自官方镜像自身，不能证明 boot 分区上限**。也就是说"分区只剩零余量"这个结论并不成立 —— 分区真实容量未验证（设备离线，`fastboot getvar all` 也看不到）。
 

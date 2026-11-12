@@ -36,11 +36,29 @@ python3 scripts/kernel/check-modem-status.py boot-sp970-nomodrm.img
 # 预期：&mpss disabled / bam-dmx disabled / smd-edge disabled / &memshare disabled
 ```
 
-同时确认保留内存已释放（`mpss_mem` 的 85 MiB 应当在内核可用内存里）：
+同时确认保留内存已释放（补丁 2 之后只剩 12.50 MB，优化前是 63.00 MB）：
 
 ```bash
 grep MemTotal /proc/meminfo
-# 预期：接近 480000 kB 量级；若 modem carveout 仍被保留会明显偏小
+# 预期：47 万 kB 以上；若 modem/venus 的 carveout 仍被保留会少约 5 万 kB
+
+ls /proc/device-tree/reserved-memory/
+# 预期：只剩 tz-apps / smem / hypervisor / tz / wcnss 五项，
+#       没有 mpss / mba / venus / rmtfs / rfsa / reserved@86680000
+```
+
+外设侧，确认这些节点都是 `disabled`（节点仍然存在，只是不 probe）：
+
+```bash
+for d in soc@0/gpu@1c00000 soc@0/video-codec@1d00000 soc@0/audio-controller@7708000 \
+         soc@0/audio-codec@771c000 soc@0/iommu@1ef0000 soc@0/iommu@1f08000; do
+    printf '%-40s %s\n' "$d" "$(cat /proc/device-tree/$d/status 2>/dev/null || echo 节点不存在)"
+done
+# 预期：全部 disabled
+cat /proc/device-tree/smp2p-hexagon/status; echo   # 预期 disabled（modem 专用）
+
+dmesg | grep -i -E 'adreno|kgsl|venus|lpass|wcd'
+# 预期：无 probe 日志（这份内核本来也没编 CONFIG_DRM_MSM / CONFIG_SOUND）
 ```
 
 ## 7.3 模块

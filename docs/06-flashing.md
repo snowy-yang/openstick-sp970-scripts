@@ -66,6 +66,7 @@ fastboot reboot
 | `D:\msm8916\out\boot-sp970-nomodrm.img` | 首个可用的去 modem boot.img |
 | `D:\msm8916\out\rootfs-sp970-debian12.img` | 首个可用的 Debian 12 rootfs（306 MB，未精简） |
 | `D:\msm8916\out-boot\boot-sp970-current.img` | 与当前可用系统配套的 boot.img（13,588,480 字节） |
+| `D:\msm8916\out-boot\boot-sp970-nomodrm-v2.img` | 设备树优化版（多约 50 MB 可用 RAM，**未上机验证**） |
 
 **不要**在回退时顺便改 cmdline 里的 `PARTUUID`：镜像之间的分区 UUID 是同一个，改了必砖。
 
@@ -108,7 +109,7 @@ fastboot flash aboot lk2nd.img
 
 设备上的 lk2nd 若来自 OpenStick 分支，会读 `/mnt/lk2nd_rproc_mode` 文件（值 `all` / `no-modem` / `none`），在启动时改 DTB 禁用对应 remoteproc 并删 rmem 节点。
 
-注意它的作用范围：**只在 fsboot 路径生效**，且是"运行期改 DTB"。本项目的做法是在设备树源码层面把 modem 关死（见 [3.2](03-kernel.md#32-补丁做了什么)），因此**不依赖**这个开关，也不建议两者同时用 —— 出问题时无法判断是谁起的作用。
+注意它的作用范围：**只在 fsboot 路径生效**，且是"运行期改 DTB"。本项目的做法是在设备树源码层面把 modem 关死（见 [3.2](03-kernel.md#32-补丁-1关掉调制解调器)），因此**不依赖**这个开关，也不建议两者同时用 —— 出问题时无法判断是谁起的作用。
 
 ## 6.8 脚本索引
 
