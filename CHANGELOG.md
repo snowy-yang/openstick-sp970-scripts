@@ -2,6 +2,29 @@
 
 本项目的版本按"一个可刷写的产物集"划分。每条记录都给出可验证的量化结果。
 
+## [0.4.0] - 2026-11-12
+
+**内核从厂商 5.15 树移植到 6.6 LTS（`msm8916-mainline/linux` 的 `msm8916/6.6`）。**
+
+### 新增
+
+- `patches/0003-arm64-dts-qcom-msm8916-handsome-openstick-add-openstick-sp970-board.patch` —— 6.6 上游没有 OpenStick 板级文件，这里新增家族公共 `msm8916-handsome-openstick-common.dtsi`（148 行）与 `msm8916-handsome-openstick-sp970.dts`（86 行），按 6.6 的标签体系重写（`msmgpio`→`tlmm`、`pronto`/`iris`→`wcnss`/`wcnss_iris`、`wcd_codec`→`pm8916_codec`），并把这些设备没有的东西全部 disable：modem/ADSP、memshare、smp2p-hexagon、bam-dmux、GPU、Venus、两套 IOMMU、三套音频 codec。
+- `arch/arm64/configs/msm8916-sp970.config` —— 以 `msm8916_defconfig` 为底的功能片段：USB gadget（chipidea + configfs FFS/RNDIS/MASS_STORAGE）、nftables/iptables、zram+zstd、WireGuard、WCN36XX。
+- `docs/11-kernel-6.6.md` —— 移植全过程：基线选择、标签对照表、板级 DTS 逐节点说明、配置做法、体积约束、双内核共存、上机检查清单。
+- `scripts/kernel/build-kernel-6.6.sh` —— 一键配置 + 编译 + 组装 `boot.img`（自动按 13,588,480 字节上限打包）。
+- 产物：`boot-sp970-6.6-tiny.img`、`boot-sp970-6.6-noinitrd.img`（均 13,588,480 字节）、`Image`（16,449,544）、`msm8916-handsome-openstick-sp970.dtb`（50,525），导出在 `D:\msm8916\out-boot-6.6\`；`rootfs-sp970-debian12-slim-6.6.img`（281,799,568）与 tar 在 `D:\msm8916\out-rootfs-6.6\`。
+
+### 变更
+
+- 预留内存 **63 MB → 14 MB**（6.6 里用 `status = "disabled"` 关掉 `mpss`/`mba`/`venus`/`gps`，只留 `wcnss` 6 MB 给 WiFi）；512 MB 机器多出约 **49 MB**。
+- 内核模块 6.6 侧 286 编出 → **69 个发布**（3.1 MB），与 5.15 的 175 个并存于 `/lib/modules/`，互不影响。
+- `boot.img` 上限 13,588,480 字节装不下「6.6 内核 + 原 6.56 MB initramfs」（需 13,930,638），因此 6.6 只提供精简 initramfs 与无 initramfs 两个版本。
+
+### 验证
+
+- 12 核编译 4 分 40 秒，0 error；DTB 反编译核对预留内存与节点状态；`modules.dep` 依赖闭包缺失 0；rootfs 重建后 562 MB / 974 MB，`swapon /swapfile` 通过。
+- **未上机验证**（设备离线）。
+
 ## [0.3.0] - 2026-11-12
 
 **设备树精简：关掉板子上不存在的硬件，并把它们的预留内存还给系统。**

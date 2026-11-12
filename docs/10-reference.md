@@ -31,7 +31,9 @@
 | `/opt/msm8916/toolchains` | 独立工具链 |
 | `/mnt/d/msm8916/out` | 原始产物（Windows `D:\msm8916\out`） |
 | `/mnt/d/msm8916/out-slim` | 精简 rootfs 产物 |
-| `/mnt/d/msm8916/out-boot` | boot.img 候选 |
+| `/mnt/d/msm8916/out-boot` | boot.img 候选（5.15） |
+| `/mnt/d/msm8916/out-boot-6.6` | 6.6 内核与 boot.img 候选 |
+| `/mnt/d/msm8916/out-rootfs-6.6` | 含 6.6 模块的 rootfs 镜像 |
 | `/mnt/d/msm8916/out-gcc13` | GCC 13.3 编出的 lk2nd |
 
 ## 10.3 关键配置摘录
@@ -166,6 +168,26 @@ Compress=yes
 | `rootfs-sp970-debian12.img` | 首个可用的 Debian 12 rootfs（306 MB） |
 | `rootfs-sp970-nomodrm.img` | Debian 11 旧版，备用（243 MB） |
 | `lk2nd.img` | 设备原用 lk2nd（387 KB） |
+
+### `D:\msm8916\out-boot-6.6\`（6.6 LTS）
+
+| 文件 | 字节 | SHA-256 |
+|---|---|---|
+| `boot-sp970-6.6-noinitrd.img` | 13,588,480 | `79e3f4a0f186d6d7e4cdcec34f51837bd2dd6d7763b8ffd0727cad03b39cc13a` |
+| `boot-sp970-6.6-tiny.img` | 13,588,480 | `232c596808af067cdbb5e33f6b567f7b0f9d826c3452c101e45ee1e97e7b1fe6` |
+| `Image` | 16,449,544 | `c646e2976ff3e35eea6ec2e8669d6101a08ae91680c2a559f22dbfa89872130d` |
+| `msm8916-handsome-openstick-sp970.dtb` | 50,525 | `8015a19bb43749728bdf07dec716f22667abc7fcf6252589c4fa6447ece14fd3` |
+
+内核版本 `6.6.0-sp970+`，cmdline 与 5.15 版完全一致。
+
+### `D:\msm8916\out-rootfs-6.6\`
+
+| 文件 | 字节 | SHA-256 |
+|---|---|---|
+| `rootfs-sp970-debian12-slim-6.6.img`（sparse） | 281,799,568 | `b73acace41aecc38aaf1e4eaa03292357494b36c9d1487aec4a3c4cc0058b792` |
+| `rootfs66-debian12-slim.tar.gz` | 84,896,203 | `ec0fb1eb2a0e979f2feb047130c8e4195930af914cd6320cea1716316c3dc43f` |
+
+ext4，UUID `e92c62a7-390f-4edc-b36f-b71f931c5a21`，内容 562 MB / 974 MB；`/lib/modules/` 下同时有 `5.15.0-handsomekernel+`（175 个）与 `6.6.0-sp970+`（69 个）。
 
 ## 10.7 设备实测状态
 

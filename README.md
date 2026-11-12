@@ -27,6 +27,7 @@
 | 项目 | 结果 |
 |---|---|
 | 内核 | 5.15.0-handsomekernel+，自编译，**modem 子系统关闭** |
+| 内核（6.6 LTS 移植） | 6.6.0-sp970+，基于 `msm8916-mainline/linux` 的 `msm8916/6.6`；已编译、未上机 |
 | 系统 | Debian 12.15 bookworm arm64，systemd 252.39 |
 | 内存策略 | zram（zstd，256 MB，pri 100）+ 256 MB swapfile（pri 10） |
 | 根文件系统 | 303 MB 用户空间 + 256 MB swap，装进 1 GiB ext4 |
@@ -89,6 +90,8 @@ fastboot -S 200M flash rootfs rootfs-sp970-debian12-slim.img
 fastboot reboot
 ```
 
+> 想换到 **6.6 LTS** 基线？见 [11. 内核 6.6 LTS 移植](docs/11-kernel-6.6.md)：基底换成 `msm8916-mainline/linux` 的 `msm8916/6.6` 分支，板级 DTS 打 `patches/0003-*.patch`，配置片段是 `arch/arm64/configs/msm8916-sp970.config`（`0001`/`0002` 只适用于 5.15 那棵树）。
+
 > 刷机前请先读 [6. 刷写与回滚](docs/06-flashing.md) —— 特别是 `PARTUUID` 不可改、`aboot` 不要动这两条红线。
 
 ## 仓库结构
@@ -109,9 +112,12 @@ fastboot reboot
 │   ├── 07-verification.md
 │   ├── 08-maintenance.md
 │   ├── 09-troubleshooting.md
-│   └── 10-reference.md
+│   ├── 10-reference.md
+│   └── 11-kernel-6.6.md
 ├── patches/
-│   └── 0001-arm64-dts-qcom-msm8916-handsome-openstick-disable-modem.patch
+│   ├── 0001-arm64-dts-qcom-msm8916-handsome-openstick-disable-modem.patch              5.15：关 modem
+│   ├── 0002-arm64-dts-qcom-msm8916-handsome-openstick-disable-unused-peripherals.patch 5.15：关无用外设
+│   └── 0003-arm64-dts-qcom-msm8916-handsome-openstick-add-openstick-sp970-board.patch   6.6：新增板级支持
 ├── artifacts/
 │   └── SHA256SUMS.txt            构建产物校验和（二进制不入库）
 └── scripts/                      按流程阶段分组的脚本（索引见 scripts/README.md）
@@ -137,6 +143,7 @@ fastboot reboot
 | [8. 运行维护](docs/08-maintenance.md) | 日常检查、发行版升级、内核更新、凭据、备份、红线 |
 | [9. 故障排查](docs/09-troubleshooting.md) | 11 类真实故障的根因、验证命令与修复 |
 | [10. 参考](docs/10-reference.md) | 版本、路径、配置摘录、体积账本、产物清单、待办 |
+| [11. 内核 6.6 LTS 移植](docs/11-kernel-6.6.md) | 换基线、板级 DTS 重写、标签对照、配置重做、boot.img 体积约束、双内核共存 |
 
 ## 关键设计决策
 

@@ -35,6 +35,7 @@ PowerShell 版本读 `$env:WIFI_PSK` / `$env:DEVICE_PASS`。
 | `audit-gains.sh` | 量化裁剪收益：Image 体积占比分析 |
 | `audit-size.sh` | 盘点当前内核配置中体积大/对 SP970 无用的子系统 |
 | `build-lk2nd-gcc13.sh` | Build lk2nd with an ISOLATED ARM GNU Toolchain (GCC 13.3), leaving the |
+| `build-kernel-6.6.sh` | 配置 + 编译 6.6 LTS 内核（`msm8916-mainline/linux` 的 `msm8916/6.6`）并按 13,588,480 字节上限组装 boot.img |
 | `check-depmod.sh` | 挂载 rootfs.raw，用 `depmod -n` 空运行自检模块索引（不写盘） |
 | `check-modem-status.py` | 检查反编译后的 dts 中各 modem 节点的 status""" |
 | `compare-modules.py` | 对比 ramdisk 中官方模块与本地新编模块，列出缺失项""" |

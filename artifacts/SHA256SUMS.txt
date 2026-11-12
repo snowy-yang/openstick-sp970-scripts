@@ -27,3 +27,15 @@ f11d968f824d7d63aaf7cb5e1267fddcbdca05b40c627981a61986a239906e19  out-slim/rootf
 # ---- 重编 lk2nd（D:\msm8916\out-gcc13\）----
 # 具体校验和见该目录下的 SHA256SUMS.txt。
 #   lk2nd.img 397,328 / lk.bin 303,124 / lk2nd.tar 399,360 / emmc_appsboot.mbn 375,564
+
+# ---- 6.6 LTS 内核产物（D:\msm8916\out-boot-6.6\）----
+# 内核版本 6.6.0-sp970+，cmdline 与 5.15 版一致。
+79e3f4a0f186d6d7e4cdcec34f51837bd2dd6d7763b8ffd0727cad03b39cc13a  out-boot-6.6/boot-sp970-6.6-noinitrd.img
+232c596808af067cdbb5e33f6b567f7b0f9d826c3452c101e45ee1e97e7b1fe6  out-boot-6.6/boot-sp970-6.6-tiny.img
+c646e2976ff3e35eea6ec2e8669d6101a08ae91680c2a559f22dbfa89872130d  out-boot-6.6/Image
+8015a19bb43749728bdf07dec716f22667abc7fcf6252589c4fa6447ece14fd3  out-boot-6.6/msm8916-handsome-openstick-sp970.dtb
+
+# ---- 6.6 LTS 根文件系统（D:\msm8916\out-rootfs-6.6\）----
+# /lib/modules/ 下同时有 5.15.0-handsomekernel+（175 个）与 6.6.0-sp970+（69 个）
+b73acace41aecc38aaf1e4eaa03292357494b36c9d1487aec4a3c4cc0058b792  out-rootfs-6.6/rootfs-sp970-debian12-slim-6.6.img
+ec0fb1eb2a0e979f2feb047130c8e4195930af914cd6320cea1716316c3dc43f  out-rootfs-6.6/rootfs66-debian12-slim.tar.gz

@@ -1,0 +1,389 @@
+From 8469e3252f0f2387b765403b3798aabab41dc9a2 Mon Sep 17 00:00:00 2001
+From: snowy-yang <41898282+snowy-yang@users.noreply.github.com>
+Date: Thu, 12 Nov 2026 19:21:59 +0800
+Subject: [PATCH] arm64: dts: qcom: msm8916-handsome-openstick: add OpenStick
+ SP970 board
+
+The OpenStick sticks (UFI-style USB dongles) are based on MSM8916 but are
+not yet described upstream. Add a common dtsi for the family plus the SP970
+board, derived from the 5.15 vendor tree and ported to the current bindings:
+
+  - eMMC, UART console, USB (GPIO based ID/OTG detection) and WCNSS WiFi
+  - restart button and the three front LEDs (WiFi/internet/OS)
+  - disable everything the sticks do not have: modem/ADSP, memshare,
+    smp2p-hexagon, bam-dmux, GPU, Venus, both IOMMUs and the audio codecs
+
+Disabling the unused firmware carve-outs (mpss/mba/venus/gps) frees about
+49 MB of the 63 MB reserved by the SoC dtsi, which matters a lot on the
+512 MB variants.
+
+Also add the msm8916-sp970.config fragment with the peripherals these
+devices need (USB gadget, netfilter/nftables, zram, WireGuard, WCN36XX).
+---
+ arch/arm64/boot/dts/qcom/Makefile             |   1 +
+ .../msm8916-handsome-openstick-common.dtsi    | 157 ++++++++++++++++++
+ .../qcom/msm8916-handsome-openstick-sp970.dts |  87 ++++++++++
+ arch/arm64/configs/msm8916-sp970.config       |  78 +++++++++
+ 4 files changed, 323 insertions(+)
+ create mode 100755 arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
+ create mode 100755 arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-sp970.dts
+ create mode 100755 arch/arm64/configs/msm8916-sp970.config
+
+diff --git a/arch/arm64/boot/dts/qcom/Makefile b/arch/arm64/boot/dts/qcom/Makefile
+index 342cd99c2..da5e07ec8 100644
+--- a/arch/arm64/boot/dts/qcom/Makefile
++++ b/arch/arm64/boot/dts/qcom/Makefile
+@@ -28,6 +28,7 @@ dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-ark-peach.dtb
+ dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-asus-z00l.dtb
+ dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-asus-z010d.dtb
+ dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-gplus-fl8005a.dtb
++dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-handsome-openstick-sp970.dtb
+ dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-huawei-g7.dtb
+ dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-huawei-y635.dtb
+ dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-lg-c50.dtb
+diff --git a/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
+new file mode 100755
+index 000000000..e6c729740
+--- /dev/null
++++ b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-common.dtsi
+@@ -0,0 +1,157 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Copyright (C) 2021-2022 HandsomeYingyan <handsomeyingyan@gmail.com>
++ *
++ * Common device tree for the OpenStick family (MSM8916 UFI-style USB sticks).
++ * Board specific files must set the model/compatible and the GPIOs.
++ */
++
++#include "msm8916-pm8916.dtsi"
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++/ {
++	model = "Handsome OpenStick Generic";
++	compatible = "handsome,openstick", "qcom,msm8916";
++
++	aliases {
++		mmc0 = &sdhc_1; /* eMMC */
++		serial0 = &blsp_uart2;
++	};
++
++	chosen {
++		stdout-path = "serial0";
++	};
++
++	/*
++	 * These sticks have a USB ID/OTG detect pin on the SoC side; the PMIC
++	 * USBIN comparator is not wired up, so use the GPIO based extcon.
++	 */
++	usb_id: usb-id {
++		compatible = "linux,extcon-usb-gpio";
++		id-gpio = <&tlmm 110 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&usb_id_default>;
++	};
++};
++
++&blsp_dma {
++	status = "okay";
++};
++
++&blsp_uart2 {
++	status = "okay";
++};
++
++&sdhc_1 {
++	status = "okay";
++};
++
++&usb {
++	status = "okay";
++	extcon = <&usb_id>, <&usb_id>;
++};
++
++&usb_hs_phy {
++	extcon = <&usb_id>;
++};
++
++/* WiFi/Bluetooth combo (WCN36xx), wired up as a remoteproc (pronto) */
++&wcnss {
++	status = "okay";
++};
++
++/*
++ * 6.6 leaves the firmware carve-outs disabled by default; the WiFi
++ * remoteproc needs its 6 MB region, so opt in explicitly here.
++ */
++&wcnss_mem {
++	status = "okay";
++};
++
++/* ------------------------------------------------------------------ */
++/* Peripherals that do not exist (or are unused) on these boards.      */
++/*                                                                     */
++/* Everything below is disabled via status instead of deleting the     */
++/* nodes, so the SoC definitions stay intact and the disabling is      */
++/* self documenting. Disabled reserved-memory regions are not reserved */
++/* by the kernel (drivers/of/fdt.c:fdt_scan_reserved_mem() skips nodes */
++/* that are not available), so this also hands ~50 MB back to the      */
++/* buddy allocator on a 512 MB device.                                 */
++/* ------------------------------------------------------------------ */
++
++/* Modem/ADSP: not present, no firmware loaded */
++&mpss {
++	status = "disabled";
++};
++
++&mpss_mem {
++	status = "disabled";
++};
++
++&mba_mem {
++	status = "disabled";
++};
++
++&memshare {
++	status = "disabled";
++};
++
++/ {
++	smp2p-hexagon {
++		status = "disabled";
++	};
++};
++
++&bam_dmux {
++	status = "disabled";
++};
++
++&bam_dmux_dma {
++	status = "disabled";
++};
++
++/* Display, camera, video: no connectors on a stick */
++&gpu {
++	status = "disabled";
++};
++
++&gpu_iommu {
++	status = "disabled";
++};
++
++&apps_iommu {
++	status = "disabled";
++};
++
++&venus {
++	status = "disabled";
++};
++
++&venus_mem {
++	status = "disabled";
++};
++
++/* Audio: no codec/speakers on a stick */
++&lpass {
++	status = "disabled";
++};
++
++&lpass_codec {
++	status = "disabled";
++};
++
++&pm8916_codec {
++	status = "disabled";
++};
++
++&tlmm {
++	usb_id_default: usb-id-default-state {
++		pins = "gpio110";
++		function = "gpio";
++		drive-strength = <8>;
++		input-enable;
++		bias-pull-up;
++	};
++};
+\ No newline at end of file
+diff --git a/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-sp970.dts b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-sp970.dts
+new file mode 100755
+index 000000000..296f6e71f
+--- /dev/null
++++ b/arch/arm64/boot/dts/qcom/msm8916-handsome-openstick-sp970.dts
+@@ -0,0 +1,87 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Copyright (C) 2021-2022 HandsomeYingyan <handsomeyingyan@gmail.com>
++ */
++
++/dts-v1/;
++
++#include "msm8916-handsome-openstick-common.dtsi"
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/leds/common.h>
++
++/ {
++	model = "Handsome OpenStick SP970";
++	compatible = "handsome,openstick-sp970", "handsome,openstick", "qcom,msm8916";
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		pinctrl-names = "default";
++		pinctrl-0 = <&gpio_keys_default>;
++
++		label = "GPIO Buttons";
++
++		button_restart: button-restart {
++			label = "Restart";
++			gpios = <&tlmm 107 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_RESTART>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		pinctrl-names = "default";
++		pinctrl-0 = <&gpio_leds_default>;
++
++		led_wifi: led-wifi {
++			label = "blue:wifi";
++			gpios = <&tlmm 28 GPIO_ACTIVE_HIGH>;
++			function = LED_FUNCTION_WLAN;
++			color = <LED_COLOR_ID_BLUE>;
++			linux,default-trigger = "phy0tx";
++			default-state = "off";
++		};
++
++		led_internet: led-internet {
++			label = "green:internet";
++			gpios = <&tlmm 10 GPIO_ACTIVE_HIGH>;
++			function = LED_FUNCTION_WAN;
++			color = <LED_COLOR_ID_GREEN>;
++			default-state = "off";
++		};
++
++		led_os: led-os {
++			label = "red:os";
++			gpios = <&tlmm 9 GPIO_ACTIVE_HIGH>;
++			function = LED_FUNCTION_STATUS;
++			color = <LED_COLOR_ID_RED>;
++			linux,default-trigger = "heartbeat";
++			default-state = "on";
++		};
++	};
++};
++
++/* SP970 uses the newer WCN3660B variant of the combo chip */
++&wcnss_iris {
++	compatible = "qcom,wcn3660b";
++};
++
++&tlmm {
++	gpio_leds_default: gpio-leds-default-state {
++		pins = "gpio28", "gpio10", "gpio9";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-disable;
++	};
++
++	gpio_keys_default: gpio-keys-default-state {
++		pins = "gpio107";
++		function = "gpio";
++		drive-strength = <8>;
++		input-enable;
++		bias-pull-up;
++	};
++};
+\ No newline at end of file
+diff --git a/arch/arm64/configs/msm8916-sp970.config b/arch/arm64/configs/msm8916-sp970.config
+new file mode 100755
+index 000000000..c2c19007f
+--- /dev/null
++++ b/arch/arm64/configs/msm8916-sp970.config
+@@ -0,0 +1,78 @@
++# --- SP970 需要的功能（在 msm8916_defconfig 基础上补齐）---
++CONFIG_MODULES=y
++CONFIG_MODULE_UNLOAD=y
++CONFIG_DEVTMPFS=y
++CONFIG_DEVTMPFS_MOUNT=y
++CONFIG_BLK_DEV_INITRD=y
++CONFIG_EFI_PARTITION=y
++CONFIG_EXT4_FS=y
++CONFIG_TMPFS=y
++CONFIG_TMPFS_POSIX_ACL=y
++CONFIG_FANOTIFY=y
++CONFIG_INOTIFY_USER=y
++CONFIG_SIGNALFD=y
++CONFIG_TIMERFD=y
++
++# USB peripheral (ci_hdrc) + configfs gadget: adb/rndis/mass storage
++CONFIG_USB_GADGET=y
++CONFIG_USB_CHIPIDEA=y
++CONFIG_USB_CHIPIDEA_UDC=y
++CONFIG_USB_CONFIGFS=y
++CONFIG_USB_CONFIGFS_F_FS=y
++CONFIG_USB_CONFIGFS_MASS_STORAGE=y
++CONFIG_USB_CONFIGFS_RNDIS=y
++CONFIG_USB_CONFIGFS_ECM=y
++CONFIG_USB_CONFIGFS_ACM=y
++CONFIG_USB_LIBCOMPOSITE=y
++CONFIG_USB_ROLE_SWITCH=y
++CONFIG_EXTCON=y
++CONFIG_EXTCON_USB_GPIO=y
++
++# 网络与防火墙（rootfs 里启用 netfilter-persistent）
++CONFIG_NETFILTER=y
++CONFIG_NF_CONNTRACK=y
++CONFIG_NF_NAT=y
++CONFIG_NF_TABLES=y
++CONFIG_NF_TABLES_INET=y
++CONFIG_NF_TABLES_IPV4=y
++CONFIG_NF_TABLES_IPV6=y
++CONFIG_NFT_CT=y
++CONFIG_NFT_LOG=y
++CONFIG_NFT_LIMIT=y
++CONFIG_NFT_MASQ=y
++CONFIG_NFT_NAT=y
++CONFIG_NFT_COMPAT=y
++CONFIG_NETFILTER_XTABLES=y
++CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
++CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
++CONFIG_IP_NF_IPTABLES=y
++CONFIG_IP_NF_FILTER=y
++CONFIG_IP_NF_MANGLE=y
++CONFIG_IP_NF_NAT=y
++CONFIG_IP6_NF_IPTABLES=y
++
++# 内存压缩与加密
++CONFIG_ZRAM=m
++CONFIG_CRYPTO_ZSTD=y
++CONFIG_CRYPTO_LZ4=y
++CONFIG_WIREGUARD=m
++
++# WiFi (WCN3660B) + 蓝牙不需要
++CONFIG_WCN36XX=m
++CONFIG_CFG80211=y
++CONFIG_MAC80211=y
++CONFIG_RFKILL=y
++
++# 杂项
++CONFIG_LEDS_GPIO=y
++CONFIG_LEDS_TRIGGER_HEARTBEAT=y
++CONFIG_LEDS_TRIGGER_DEFAULT_ON=y
++CONFIG_KEYBOARD_GPIO=y
++CONFIG_INPUT_EVDEV=y
++CONFIG_CPU_FREQ=y
++CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
++CONFIG_PSTORE=y
++CONFIG_PSTORE_RAM=y
++CONFIG_PRINTK=y
++CONFIG_SERIAL_MSM=y
++CONFIG_SERIAL_MSM_CONSOLE=y
+\ No newline at end of file
+-- 
+2.53.0
+
